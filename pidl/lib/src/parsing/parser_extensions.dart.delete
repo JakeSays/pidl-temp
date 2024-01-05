@@ -1,0 +1,324 @@
+import '../petit/petitparser.dart';
+import '../petit/src/shared/types.dart';
+import '../petit/src/definition/internal/reference.dart';
+import 'ast.dart';
+import 'util.dart';
+import '../source.dart';
+import 'thingerator.dart';
+import 'located_string.dart';
+
+import 'parser_context.dart';
+import 'reduction_parser.dart';
+
+extension ReductionParserExtension<TValue> on Parser<TValue> 
+{
+    Parser reduce2<TResult>(ParserContext context, Callback<Result<TValue>, TResult> callback) =>
+        ReductionParser<TValue, TResult>(context, this, (value) 
+        {
+            final result = callback(value);
+            if (result is SyntaxNode)
+            {
+                result.parseDepth = depth;
+                context.lastSuccessfulNode = result;
+            }
+            return result;
+        });
+
+    Parser reduceFromList2<TResult>(ParserContext context, TResult Function(Result<Object>? list) callback) => 
+        ReductionParser<TValue, TResult>(context, this, (value) 
+        {
+            final result = callback(value as Result<Object>?);
+            if (result is SyntaxNode)
+            {
+                result.parseDepth = depth;
+                context.lastSuccessfulNode = result;
+            }
+            return result;
+        });
+}
+
+
+typedef LocatedCallback<TResult> = TResult Function(Object? value, SourceLocation location);
+
+extension LocatedParserExtension on Parser
+{
+    Parser reduce(ParserContext context, Object Function(Object? value, SourceLocation location) callback) => 
+        LocatedParser(this, context, (value, location) 
+        {
+            final result = callback(value, location);
+            setDepth(context, result);
+            return result;
+        });
+
+    Parser reduceTyped<TResult>(ParserContext context, TResult Function(Object? value, SourceLocation location) callback) => 
+        LocatedParser<TResult>(this, context, (value, location) 
+        {
+            final result = callback(value, location);
+            setDepth(context, result);
+            return result;
+        });
+}
+
+class LocatedParser<TResult> extends DelegateParser<dynamic, TResult> 
+{
+    final ParserContext _context;
+
+    LocatedParser(Parser delegate, this._context, this.callback) 
+        : super(delegate);
+
+    final LocatedCallback<TResult> callback;
+
+    @override
+    Result<TResult> parseOn(Context context) 
+    {
+        final start = context.position;
+        final result = delegate.parseOn(context);
+        if (result.isSuccess) 
+        {
+            final length = context.position - start;
+            final location = SourceLocation(source: _context.source, startOffset: start, length: length);
+            return result.success(callback(result.value, location));
+        }
+        else 
+        {
+            _context.notifyFailure(context.position, depth, result.message);
+            return result.failure(result.message);
+        }
+    }
+
+    @override
+    bool hasEqualProperties(LocatedParser<TResult> other) =>
+        super.hasEqualProperties(other) && callback == other.callback;
+
+    @override
+    LocatedParser<TResult> copy() => LocatedParser<TResult>(delegate, _context, callback);
+}
+
+Iterable<TElement> _flattenThing<TElement>(Object? thing) sync*
+{
+    if (thing == null)
+    {
+        return;
+    }
+
+    if (thing is List)
+    {
+        for (final outer in thing)   
+        {
+            if (outer is TElement)
+            {
+                yield outer;
+                continue;
+            }
+
+            if (outer is List)
+            {
+                yield* _flattenThing(outer);
+            }
+        }
+        return;
+    }
+
+    if (thing is TElement)
+    {
+        yield thing as TElement;
+    }
+}
+
+extension ParserExtension on Parser
+{
+    void setDepth<TResult>(ParserContext context, TResult result)
+    {
+        int getDepth(Parser parser)
+        {
+            if (parser is ReferenceParser)
+            {
+                return getDepth(parser.resolved!);
+            }
+
+            return parser.depth;
+        }
+
+        if (result is SyntaxNode)
+        {
+            result.parseDepth = getDepth(this);
+            context.lastSuccessfulNode = result;
+        }
+    }
+
+    Parser located(ParserContext context) => 
+        reduce2(context, (resultd) 
+        {
+            final result = resultd as Result<String>;
+            final length = result.value.length;
+            final start = result.position - length;
+            return LocatedString(string: result.value, 
+                location: SourceLocation(source: context.source, startOffset: start, length: length));
+        });
+
+    // Parser locatedToken(ParserContext context) => 
+    //     reduce2(context, (resultd) 
+    //     {
+    //         final result = resultd as Result<String>;
+    //         final length = result.value.length;
+    //         final start = result.position - length;
+    //         final token = TokenSyntax(token: result.value, 
+    //             location: SourceLocation(source: context.source, startOffset: start, length: length));
+    //         context.lastSuccessfulNode = token;
+    //         return token;
+    //     });
+
+    // Parser smash(ParserContext context) =>
+    //      flatten()
+    //     .located(context);
+
+    // Parser before(void Function() callback) =>
+    //     BeforeParser(this, callback);
+
+    // Parser after(void Function() callback) =>
+    //     AfterParser(this, callback);
+
+    // Parser/*<TResult>*/ reduce2x<TValue, TResult>(TResult Function(TValue? value) callback) => 
+    //     map((Object? value) => callback(value as TValue?));
+
+    // Parser/*<TResult>*/ reduceTokenx<TResult>(TResult Function(Token<dynamic>? value) callback) => 
+    //     map((value) => callback(value));
+    
+    Parser reduceToken(ParserContext context, Object Function(TokenSyntax? token) callback) => 
+        map((value) 
+        {
+            final result = callback(value);
+            setDepth(context, result);
+            return result;
+        });
+
+    Parser reduceKeyword(ParserContext context, Object Function(KeywordSyntax? token) callback) => 
+        map((value) 
+        {
+            final result = callback(value);
+            setDepth(context, result);
+            return result;
+        });
+
+    Parser<TResult> reduceTokenTyped<TResult>(ParserContext context, TResult Function(TokenSyntax token) callback) => 
+        map<TResult>((value) 
+        {
+            final result = callback(value);
+            setDepth(context, result);
+            return result;
+        });
+
+    Parser forwardResult(ParserContext context) => 
+        map((value) 
+        {
+            setDepth(context, value);
+            return value;
+        });
+
+    // Parser reduceTokens<TResult>(ParserContext context, TResult Function(List<Token<String>?> value) callback) => 
+    //     map((Object? value) => callback(value! as List<Token<String>?>));
+ 
+    // Parser reduceFromList<TResult>(ParserContext context, TResult Function(List<Object?>? list) callback) => 
+    //     map((Object? value) => callback(value as List<Object?>?));
+
+    Parser reduceNodes<TResult>(ParserContext context, TResult Function(SourceLocation location, Noderator? nodes) callback) =>
+        map((Object? value) 
+        {
+            if (value == null)
+            {
+                return callback(SourceLocation.invalid(context.source), null);
+            }
+
+            final nodes = _flattenThing<SyntaxNode>(value).toList();
+            final location = makeLocation(nodes, context.source);
+
+            final result = callback(location, Noderator(nodes));
+            setDepth(context, result);
+            return result;
+        });
+
+    Parser<TResult> reduceNodesTyped<TResult>(ParserContext context, TResult Function(SourceLocation location, Noderator? nodes) callback) =>
+        map((Object? value) 
+        {
+            if (value == null)
+            {
+                return callback(SourceLocation.invalid(context.source), null);
+            }
+
+            final nodes = _flattenThing<SyntaxNode>(value).toList();
+            final location = makeLocation(nodes, context.source);
+
+            final result = callback(location, Noderator(nodes));
+            setDepth(context, result);
+            return result;
+        });
+
+    Parser reduceObjects<TResult>(ParserContext context, TResult Function(SourceLocation location, Objecterator? objects) callback) =>
+        map((Object? value) 
+        {
+            if (value == null)
+            {
+                return callback(SourceLocation.invalid(context.source), null);
+            }
+
+            final nodes = _flattenThing<Object>(value).toList();
+            final location = makeLocation(nodes, context.source);
+
+            final result = callback(location, Objecterator(nodes));
+            setDepth(context, result);
+            return result;
+        });
+
+    Parser<TResult> reduceObjectsTyped<TResult>(ParserContext context, TResult Function(SourceLocation location, Objecterator? objects) callback) =>
+        map((Object? value) 
+        {
+            if (value == null)
+            {
+                return callback(SourceLocation.invalid(context.source), null);
+            }
+
+            final nodes = _flattenThing<Object>(value).toList();
+            final location = makeLocation(nodes, context.source);
+
+            final result = callback(location, Objecterator(nodes));
+            setDepth(context, result);
+            return result;
+        });
+
+    // Parser/*<List<TResult>>*/ reduceToList<TResult>(ParserContext context, TResult Function(Object? value) caster) => 
+    //     map((value) {
+    //         if (value == null)
+    //         {
+    //             return [];
+    //         }
+
+    //         if (value is TResult)
+    //         {
+    //             return [value];
+    //         }
+            
+    //         if (value is List<TResult>)
+    //         {
+    //             return value;          
+    //         }
+
+    //         final list = value as List;
+    //         final result = <TResult>[];
+    //         for (final obj in list)
+    //         {
+    //             result.add(caster(obj));
+    //         }
+    //         return result;
+    //     });
+}
+
+class LocatedToken<TValue>
+{
+    final SourceLocation location;
+    final Token<TValue> token;
+
+    LocatedToken({
+        required this.location,
+        required this.token
+    });
+}

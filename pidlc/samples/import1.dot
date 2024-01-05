@@ -1,0 +1,14 @@
+digraph Frob {
+    "Interface1" -> "DependentStruct"
+    "Interface1" -> "StructWithDependency"
+    "StructWithDependency" -> "AConst"
+    "StructWithDependency" -> "DependentStruct"
+    "StructWithDependency" -> "frob.Is2Enum"
+    "StructWithDependency" -> "int8"
+    "StructWithDependency" -> "int16"
+    "OtherStruct" -> "DependentStructAlias"
+    "OtherStruct" -> "Alias2"
+    "DependentStruct" -> "string"
+    "DependentStructAlias" -> "DependentStruct"
+    "Alias2" -> "StructWithDependency"
+}

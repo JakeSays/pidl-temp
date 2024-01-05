@@ -1,0 +1,14 @@
+name: pidlrt
+description: Embedded flutter plugin support library - pidl runtime
+version: 1.0.1
+publish_to: none
+
+environment:
+  sdk: '>=2.17.3 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  typed_data: ^1.3.1
+
+flutter:

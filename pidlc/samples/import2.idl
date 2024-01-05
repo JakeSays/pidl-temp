@@ -1,0 +1,26 @@
+//comment
+
+const int32 Os3Const = 150;
+
+enum Is2Enum
+{
+    E1,
+    E2,
+    E3
+}
+
+struct Import2Struct
+{
+    int8 is2field1 = 8;
+    int16 is2field2 = 16;
+}
+
+struct AnotherStruct
+{
+    string As1;
+}
+
+interface BaseInterface
+{
+    void Fack(AnotherStruct p1);    
+}

@@ -1,0 +1,105 @@
+import "import2.idl";
+import "import1.idl" as bart;
+
+[frob]
+enum ee
+{
+    e1 = false,
+    e2 = 0
+}
+
+[NsAttr1]
+namespace NsFoo
+{
+    [aattr1]
+    alias FooAlias = Ns.Interface1;
+
+    [aattr2]
+    alias BarList = list<Struct1>;
+
+    [application]
+    interface Interface1 : Base1, Base2
+    {
+        [mattr1]
+        Struct2 Method1(int8 p1, [pattr1] Struct1 p2 = null);
+    }
+
+    namespace NsFoo1
+    {
+        [aattr1]
+        alias FooAlias = Ns.Interface1;
+
+        [aattr2]
+        alias BarList = list<Struct1>;
+
+        [application]
+        interface Interface1 : Base1, Base2
+        {
+            [mattr1]
+            Struct2 Method1(int8 p1, [pattr1] Struct1 p2 = null);
+        }
+    }
+}
+
+[aattr1]
+alias FooAlias = Ns.Interface1;
+
+[aattr2]
+alias BarList = list<Struct1>;
+
+[application]
+interface Interface1 : Base1, Base2
+{
+    [mattr1]
+    Struct2 Method1(int8 p1, [pattr1] Struct1 p2 = null);
+}
+
+[flags]
+enum enum1 : int8
+{
+    e1,
+    e2 = 22,
+    e3 = 3,
+    [eattr2]
+    e4 = 0xFF,
+    e4
+}
+
+namespace Constants
+{
+    [attr1(), attr2]
+    [attr3(arg1 = 10, arg2 = "hello"), 
+        arg4]
+    const Ns.Foo F0 = Ns.Foo.One;
+
+    const string Ee1 
+        = "string1";
+    const string Ee2 = "string2";
+
+    const bool Bool = true;
+
+    const int8 Frob = 10;
+
+    const int8 Frob2 = 10;
+}
+
+[attr5][attr6(arg5 = false)]
+struct Struct1 : Foo
+{
+    //this is an attached comment
+    //this is another one
+    int8 Field1;
+    string Field2;
+}
+
+struct Struct2
+{
+    int64 Field3;
+    float32 Field4;
+
+    Ns.Foo Field5;
+
+    list<string> Field6;
+    map<float32, Struct1> Field7;
+}
+

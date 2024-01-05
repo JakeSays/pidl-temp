@@ -1,0 +1,18 @@
+export 'src/parsing/parser.dart';
+export 'src/console.dart';
+export 'src/tools/compile_tool.dart';
+export 'src/tools/analyze_grammar.dart';
+export 'src/tools/dump_grammar.dart';
+export 'src/tools/idltool.dart';
+export 'src/types.dart';
+export 'src/diagnostics.dart';
+export 'src/issue_code.dart';
+export 'src/issues.dart';
+export 'src/kinds.dart' show DeclKind, LiteralKind, IntRadix;
+export 'src/compile_result.dart';
+export 'src/type_visitor.dart';
+export 'src/source.dart';
+export 'src/util.dart' show formatIntAsHex;
+export 'src/idl_compiler.dart';
+export 'src/source_code_provider.dart';
+export 'src/file_system_provider.dart';

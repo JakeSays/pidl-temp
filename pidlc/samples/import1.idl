@@ -1,0 +1,62 @@
+import "import2.idl" as frob;
+
+[file:cxx.namespace("foo")]
+
+const uint32 AConst = 0xFEEDBABE;
+
+[Attr(xx = AConst)]
+struct StructWithDependency
+{
+    DependentStruct struct2;
+    frob.Is2Enum is1field0 = frob.Is2Enum.E2;
+    int8 is1field1;
+    int16 is1field2;
+}
+
+struct OtherStruct : OsBase
+{
+    [Attr2(OsEnum.Os2)]
+    DependentStructAlias? Ds1;
+    Alias2 Ds2;
+    frob.Import2Struct Is2;
+}
+
+struct OsBase
+{
+    [dart:name("ob1")]
+    string OB1;
+}
+
+const string ChannelName = "freer";
+
+alias DependentStructAlias = DependentStruct;
+
+[implementation:application, channel(ChannelName)]
+interface Interface1 : frob.BaseInterface
+{
+    DependentStruct Method1(StructWithDependency p1);
+    void Method2(frob.Import2Struct p1);
+}
+
+[implementation:host, channel(ChannelName)]
+interface Interface2 : frob.BaseInterface
+{
+    DependentStruct Method1(StructWithDependency p1);
+    void Method2(frob.Import2Struct p1);
+}
+
+struct DependentStruct
+{
+    string is2field1 = "hello";
+}
+
+alias Alias2 = list<StructWithDependency>;
+
+[flags]
+enum OsEnum : uint16
+{
+    Os1 = 0b1010,
+    Os2 = 9,
+    Os3 = frob.Os3Const
+}
+

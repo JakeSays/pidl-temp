@@ -1,0 +1,12 @@
+struct HasNulls1
+{
+    string StringField = "hello";
+    string StringField2 = 9;
+}
+
+struct HasNulls2
+{
+    HasNulls1? Field0;
+    int8? Field1;
+    int16? Field2 = 10999999999;
+}
